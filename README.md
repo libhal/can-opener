@@ -48,10 +48,15 @@ conan build . -pr mod-lcp40-v5  -pr arm-gcc-12.3
 
 ## 💾 Flashing your MicroMod Board
 
+> [!IMPORTANT]
+> Make sure to replace the `--device` and port `-p` (examples uses
+> `/dev/tty.usbserial-58690101901`) serial device paths and names to the correct
+> ones for your platform.
+
 For the lpc40 v5 board:
 
 ```bash
-nxpprog --control --cpu lpc4078 --binary build/micromod/mod-lpc40-v5/Release/app.elf.bin --device /dev/tty.usbserial-2110
+nxpprog --device /dev/tty.usbserial-58690101901 --control --cpu lpc4078 --binary build/micromod/mod-lpc40-v5/Release/app.elf.bin
 ```
 
 For the stm32f1 v4 board:
