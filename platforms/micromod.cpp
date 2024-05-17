@@ -26,6 +26,7 @@ hardware_map_t initialize_platform()
     .led = &hal::micromod::v1::led(),
     .console = &hal::micromod::v1::console(hal::buffer<128>),
     .clock = &hal::micromod::v1::uptime_clock(),
+    .can = &hal::micromod::v1::can(),
     .reset = +[]() { hal::micromod::v1::reset(); },
   };
 }

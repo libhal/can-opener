@@ -1,70 +1,55 @@
-# libhal-starter
+# Can Opener
 
-Before getting started, if you haven't used libhal before, follow the
-[Getting Started](https://libhal.github.io/getting_started/) guide.
+Can Opener is an open source cross platform firmware application that
+implements the [Lawicel slcan (Serial CANBUS) protocol](https://www.canusb.com/files/canusb_manual.pdf) using libhal and its ecosystem.
 
-To build the project:
+Currently this project only supports SparkFun's MicroMod boards.
 
-```bash
-conan build . -pr <target_name> -pr <compiler>
-```
+Any MicroMod board should work so long as it implements the following APIs:
 
-For the `lpc4078`
+- `hal::micromod::v1::can`: Used to communication over CAN.
+- `hal::micromod::v1::led`: Used as an indicator in the application.
+- `hal::micromod::v1::console`: Used to communicate over serial to a host device
+- `hal::micromod::v1::uptime_clock`: Used for telling time
+- `hal::micromod::v1::reset`: Used to reset the device
 
-```bash
-conan build . -pr lpc4078 -pr arm-gcc-12.3
-```
+## 🏗️ Building the Application
 
-For the STM32F103 MicroMod V4:
+libhal appications use the [Conan package manager](https://conan.io/center). To
+use libhal you will need to install conan. Conan and libhal will handle installing the appropriate compiler and build systems for you. No need to install them yourself.
 
-```bash
-conan build . -pr mod-stm32f1-v4 -pr arm-gcc-12.3
-```
+Follow the "🚀 libhal Getting Started" guide and stop when you reach
+"🛠️ Building Demos". Come back to this page to continue the build steps. The
+link to the guide is [here](https://libhal.github.io/getting_started/).
 
-## Supported platforms
-
-- lpc4078
-- lpc4074
-- micromod
-  - lpc4078 MicroMod V5
-  - stm32f103c8 MicroMod V4
-- stm32f103c8
-
-## Installing Platform Profiles
-
-`lpc40` profiles:
-
-```bash
-conan config install -sf conan/profiles/v2 -tf profiles https://github.com/libhal/libhal-lpc40.git
-```
-
-`stm32f1` profiles:
-
-```bash
-conan config install -sf conan/profiles/v2 -tf profiles https://github.com/libhal/libhal-stm32f1.git
-```
-
-`micromod` profiles:
+Download the MicroMod profiles using:
 
 ```bash
 conan config install -sf conan/profiles/v1 -tf profiles https://github.com/libhal/libhal-micromod.git
 ```
 
-## Description of Files
+To build for the `stm32f1 MicroMod v4`:
 
-1. `main.cpp`: It contains the main loop of the application. In this
-   example, it just prints "Hello, World" and toggles an LED on and off.
-2. `application.hpp`: This file defines the `hardware_map_t` struct which
-   holds pointers to the led, console, clock interfaces and reset callback.
-   Modify this structure to change the set of required drivers and settings for an application. `initialize_platform`, and `application` functions that must
-   be implemented elsewhere.
-3. `CMakeLists.txt`: This is the build file for the project. It sets the minimum
-   required version of CMake, names the project, and sets the platform library.
-   It also defines the sources to compile and the libraries to link against.
-   Finally, it sets up the post-build steps with `libhal_post_build`.
-4. `platforms/lpc4078.cpp`: This file provides an implementation for
-   `initialize_platform`, for the LPC4078 platform. In `initialize_platform`,  it sets the clock speed, configures a uart peripheral for console output, and sets up an output pin for the led. Each driver is statically allocated. The returned `hardware_map_t` has the pointers to each statically allocated peripheral and a reset callback that can resets the microcontroller.
-5. `platforms/*.cpp`: Just like `platforms/lpc4078.cpp` but for any other
-   platforms. It's important to note that the specifics of the
-   `initialize_platform` function and the peripherals used will likely vary
-   between different platforms but sometimes they don't. As an example the `lpc4074.cpp` file just includes directly the `lpc4078.cpp` because those are identical.
+```bash
+conan build . -pr mod-stm32f1-v4
+```
+
+To build for the `lcp40 MicroMod v5`:
+
+```bash
+conan build . -pr mod-lcp40-v5
+```
+
+## 💾 Flashing your MicroMod Board
+
+For the lpc40 v5 board:
+
+```bash
+nxpprog --control --cpu lpc4078 --binary build/micromod/mod-lpc40-v5/Release/app.elf.bin --device /dev/tty.usbserial-2110
+```
+
+For the stm32f1 v4 board:
+
+```bash
+stm32loader -p /dev/tty.usbserial-58690101901 -e -w -v build/micromod/mod-stm32f1-v4/Release/app.elf.bin
+```
