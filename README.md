@@ -1,4 +1,4 @@
-# Can Opener
+# 🥫🔓 Can Opener
 
 Can Opener is an open source cross platform firmware application that
 implements the [Lawicel slcan (Serial CANBUS) protocol](https://www.canusb.com/files/canusb_manual.pdf) using libhal and its ecosystem.
@@ -28,16 +28,22 @@ Download the MicroMod profiles using:
 conan config install -sf conan/profiles/v1 -tf profiles https://github.com/libhal/libhal-micromod.git
 ```
 
+Download the ARM GCC profiles:
+
+```bash
+conan config install -tf profiles -sf conan/profiles/v1 https://github.com/libhal/arm-gnu-toolchain.git
+```
+
 To build for the `stm32f1 MicroMod v4`:
 
 ```bash
-conan build . -pr mod-stm32f1-v4
+conan build . -pr mod-stm32f1-v4 -pr arm-gcc-12.3
 ```
 
 To build for the `lcp40 MicroMod v5`:
 
 ```bash
-conan build . -pr mod-lcp40-v5
+conan build . -pr mod-lcp40-v5  -pr arm-gcc-12.3
 ```
 
 ## 💾 Flashing your MicroMod Board
