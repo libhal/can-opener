@@ -25,25 +25,16 @@ int main()
   auto& led = *hardware_map.led;
   auto& clock = *hardware_map.clock;
   auto& console = *hardware_map.console;
+  auto& can = *hardware_map.can;
 
-  hal::print(console, "Starting Application!\n");
-  hal::print(console, "Will reset after ~10 seconds\n");
+  can.on_receive([&console, &led](const hal::can::message_t& p_message) {
+    hal::print<128>(console, "NEW MESSAGE! 0x%04X", p_message.id);
+  });
 
-  for (int i = 0; i < 10; i++) {
-    // Print message
-    hal::print(console, "Hello, World\n");
-
-    // Toggle LED
-    led.level(true);
-    hal::delay(clock, 500ms);
-
-    led.level(false);
+  while (true) {
+    led.level(!led.level());
     hal::delay(clock, 500ms);
   }
-
-  hal::print(console, "Resetting!\n");
-  hal::delay(clock, 100ms);
-  hardware_map.reset();
 
   return 0;
 }

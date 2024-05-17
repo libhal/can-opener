@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <libhal/can.hpp>
 #include <libhal/functional.hpp>
 #include <libhal/output_pin.hpp>
 #include <libhal/serial.hpp>
@@ -24,6 +25,7 @@ struct hardware_map_t
   hal::output_pin* led;
   hal::serial* console;
   hal::steady_clock* clock;
+  hal::can* can;
   hal::callback<void()> reset;
 };
 
