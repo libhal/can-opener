@@ -24,3 +24,4 @@ class demos(ConanFile):
     def requirements(self):
         bootstrap = self.python_requires["libhal-bootstrap"]
         bootstrap.module.add_demo_requirements(self)
+        self.requires("ring-span-lite/[^0.6.0]")

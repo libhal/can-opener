@@ -32,6 +32,7 @@ endif()
 
 find_package(libhal-${platform_library} REQUIRED CONFIG)
 find_package(libhal-util REQUIRED CONFIG)
+find_package(ring-span-lite REQUIRED CONFIG)
 
 add_executable(${PROJECT_NAME}
     app/main.cpp
@@ -42,7 +43,8 @@ target_compile_options(${PROJECT_NAME} PRIVATE -g -Wall -Wextra)
 target_include_directories(${PROJECT_NAME} PUBLIC include)
 target_link_libraries(${PROJECT_NAME} PRIVATE
     libhal::${platform_library}
-    libhal::util)
+    libhal::util
+    nonstd::ring-span-lite)
 
 libhal_post_build(${PROJECT_NAME})
 libhal_disassemble(${PROJECT_NAME})
