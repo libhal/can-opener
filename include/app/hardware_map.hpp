@@ -22,7 +22,7 @@
 
 struct hardware_map_t
 {
-  hal::output_pin* led;
+  hal::output_pin* red_led;
   hal::serial* console;
   hal::steady_clock* clock;
   hal::can* can;
