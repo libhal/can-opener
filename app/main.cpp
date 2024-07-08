@@ -329,7 +329,7 @@ void can_receive_handler(const hal::can::message_t& p_message)
 namespace hal {
 /**
  * @ingroup Streams
- * @brief Discard received bytes until the sequence is found
+ * @brief Fill a buffer of bytes until the sequence is found
  *
  */
 class stream_fill_upto_v2
@@ -421,11 +421,12 @@ int main()
     }
 
     if (not transmit_queue.empty()) {
-      can.send(transmit_queue.pop_back());
+      const auto message = transmit_queue.pop_front();
+      can.send(message);
     }
 
     if (not receive_queue.empty()) {
-      const auto message = receive_queue.pop_back();
+      const auto message = receive_queue.pop_front();
       print_encoded_can_message(console, message);
     }
 
