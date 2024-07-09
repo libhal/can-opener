@@ -15,8 +15,10 @@ Any MicroMod board should work so long as it implements the following APIs:
 
 ## 🏗️ Building the Application
 
-libhal appications use the [Conan package manager](https://conan.io/center). To
-use libhal you will need to install conan. Conan and libhal will handle installing the appropriate compiler and build systems for you. No need to install them yourself.
+libhal applications use the [Conan package manager](https://conan.io/center). To
+use libhal you will need to install conan. Conan and libhal will handle
+installing the appropriate compiler and build systems for you. No need to
+install them yourself.
 
 Follow the "🚀 libhal Getting Started" guide and stop when you reach
 "🛠️ Building Demos". Come back to this page to continue the build steps. The
@@ -57,6 +59,12 @@ For the lpc40 v5 board:
 
 ```bash
 nxpprog --device /dev/tty.usbserial-58690101901 --control --cpu lpc4078 --binary build/micromod/mod-lpc40-v5/Release/app.elf.bin
+```
+
+For the stm32f1 v5 board:
+
+```bash
+stm32loader -p /dev/tty.usbserial-58690101901 -e -w -v -B build/micromod/mod-stm32f1-v4/Release/app.elf.bin
 ```
 
 For the stm32f1 v4 board:
