@@ -235,6 +235,10 @@ void handle_command(hal::serial& p_serial,
       handled = version_command(p_serial);
       break;
     }
+    case '\r': {
+      handled = true;
+      break;
+    }
   }
 
   if (not open) {
@@ -431,7 +435,7 @@ int main()
     }
 
     red_led.level(false);
-    hal::delay(clock, 250ms);
+    hal::delay(clock, 1ms);
   }
 
   return 0;
