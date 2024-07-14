@@ -39,14 +39,18 @@ conan config install -tf profiles -sf conan/profiles/v1 https://github.com/libha
 To build for the `stm32f1 MicroMod v4`:
 
 ```bash
-conan build . -pr mod-stm32f1-v4 -pr arm-gcc-12.3
+conan build . -pr mod-stm32f1-v4 -pr arm-gcc-12.3 -s build_type=Debug
 ```
 
 To build for the `lcp40 MicroMod v5`:
 
 ```bash
-conan build . -pr mod-lcp40-v5  -pr arm-gcc-12.3
+conan build . -pr mod-lcp40-v5  -pr arm-gcc-12.3  -s build_type=Debug
 ```
+
+> [!CAUTION]
+> The `Release` version of the binary doesn't seem to work well so users should
+> stick to the `Debug` version until this notice is removed.
 
 ## 💾 Flashing your MicroMod Board
 
@@ -58,17 +62,17 @@ conan build . -pr mod-lcp40-v5  -pr arm-gcc-12.3
 For the lpc40 v5 board:
 
 ```bash
-nxpprog --device /dev/tty.usbserial-58690101901 --control --cpu lpc4078 --binary build/micromod/mod-lpc40-v5/Release/app.elf.bin
+nxpprog --device /dev/tty.usbserial-58690101901 --control --cpu lpc4078 --binary build/micromod/mod-lpc40-v5/Debug/app.elf.bin
 ```
 
 For the stm32f1 v5 board:
 
 ```bash
-stm32loader -p /dev/tty.usbserial-58690101901 -e -w -v -B build/micromod/mod-stm32f1-v4/Release/app.elf.bin
+stm32loader -p /dev/tty.usbserial-58690101901 -e -w -v -B build/micromod/mod-stm32f1-v4/Debug/app.elf.bin
 ```
 
 For the stm32f1 v4 board:
 
 ```bash
-stm32loader -p /dev/tty.usbserial-58690101901 -e -w -v build/micromod/mod-stm32f1-v4/Release/app.elf.bin
+stm32loader -p /dev/tty.usbserial-58690101901 -e -w -v build/micromod/mod-stm32f1-v4/Debug/app.elf.bin
 ```
