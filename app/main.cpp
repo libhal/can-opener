@@ -270,11 +270,11 @@ void handle_command(hal::serial& p_serial,
       case 'T':
       case 'r':
       case 'R': {
-        auto message = string_to_can_message(p_command);
+        const auto message = string_to_can_message(p_command);
         if (message) {
           transmit_queue.push_back(message.value());
+          handled = true;
         }
-        handled = message.has_value();
         break;
       }
     }
