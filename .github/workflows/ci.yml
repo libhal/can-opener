@@ -17,6 +17,9 @@ name: ✅ CI
 on:
   workflow_dispatch:
   pull_request:
+  release:
+    types:
+      - published
   push:
     branches:
       - main
@@ -53,8 +56,36 @@ jobs:
       - name: Install MicroMod platform profiles
         run: conan config install -sf conan/profiles/v1 -tf profiles https://github.com/libhal/libhal-micromod.git
 
-      - name: 🏗️ Build app using "mod-lpc40-v5"
+      - name: 🏗️ Build app using "mod-lpc40-v5" [Debug]
+        run: conan build . -pr mod-lpc40-v5 -pr arm-gcc-12.3 -s build_type=Debug
+
+      - name: 🏗️ Build app using "mod-stm32f1-v4" [Debug]
+        run: conan build . -pr mod-stm32f1-v4 -pr arm-gcc-12.3 -s build_type=Debug
+
+      - name: 🏗️ Build app using "mod-lpc40-v5" [Release]
         run: conan build . -pr mod-lpc40-v5 -pr arm-gcc-12.3
 
-      - name: 🏗️ Build app using "mod-stm32f1-v4"
+      - name: 🏗️ Build app using "mod-stm32f1-v4" [Release]
         run: conan build . -pr mod-stm32f1-v4 -pr arm-gcc-12.3
+
+      - name: 🔝 Extract "mod-lpc40-v5-Debug.elf.bin" to repo root
+        run: cp build/micromod/mod-lpc40-v5/Debug/app.elf.bin mod-lpc40-v5-Debug.elf.bin
+
+      - name: 🔝 Extract "mod-lpc40-v5-Release.elf.bin" to repo root
+        run: cp build/micromod/mod-lpc40-v5/Release/app.elf.bin mod-lpc40-v5-Release.elf.bin
+
+      - name: 🔝 Extract "mod-stm32f1-v4-Debug.elf.bin" to repo root
+        run: cp build/micromod/mod-stm32f1-v4/Debug/app.elf.bin mod-stm32f1-v4-Debug.elf.bin
+
+      - name: 🔝 Extract "mod-stm32f1-v4-Release.elf.bin" to repo root
+        run: cp build/micromod/mod-stm32f1-v4/Release/app.elf.bin mod-stm32f1-v4-Release.elf.bin
+
+      - name: 🚀 Push Binaries to Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            mod-lpc40-v5-Debug.elf.bin
+            mod-lpc40-v5-Release.elf.bin
+            mod-stm32f1-v4-Debug.elf.bin
+            mod-stm32f1-v4-Release.elf.bin
