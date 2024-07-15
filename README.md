@@ -13,6 +13,42 @@ Any MicroMod board should work so long as it implements the following APIs:
 - `hal::micromod::v1::uptime_clock`: Used for telling time
 - `hal::micromod::v1::reset`: Used to reset the device
 
+## 🚀 Installing Firmware via prebuilt binaries
+
+We provide prebuilt binaries for each of our releases. You can use these to program your microcontroller with the CanOpener firmware.
+
+> [!NOTE]
+> We plan to eliminate this flow once the CanOpener website supports flashing
+> devices. The aim is to provide an "hardware update" button that will flash
+> your device for you. It would present a screen that provides a list of all of
+> the released versions and allow the user to select which one they want to
+> install or simply install the latest..
+
+Steps to upgrade firmware are:
+
+1. Connect CanOpener device to computer using a USB cable.
+2. Download [CanOpener/0.0.0](https://github.com/libhal/can-opener/releases/download/0.0.0/mod-stm32f1-v4-Debug.bin).
+3. Program the device by using the [stm-serial-flasher](https://gamadril.github.io/stm-serial-flasher/) website.
+   1. To use this website, click "Select Port"
+   2. Then click "Pair New Port" and look for a the serial port for
+      your device. It should have a name like `COM8`, `/dev/ttyUSB2`,
+      `/dev/ttyACM1`, or `/dev/tty.serial-1100`.
+   3. Click the "x" to close the modal screen.
+   4. Click "Connect".
+   5. Click "Open File" and navigate to where the file was downloaded select it.
+   6. Now click "Flash" and wait for the board to be flashed.
+   7. Click disconnect.
+4. Now go to the [CanOpener](https://libhal.github.io/web-tools/can/) website and connect your device to the website.
+5. You are done 😄
+
+> [!WARNING]
+> If you are not using a CanOpener USB to CAN adaptor board and you are using
+> your own board, then make sure to have the can transceiver connected. Without
+> it connected, some CAN peripherals may hang at initialization and may hang
+> when attempting to transmit a message. If you're device is not working with
+> the CanOpener website, consider checking the state of your CAN transceiver IC
+> or board.
+
 ## 🏗️ Building the Application
 
 libhal applications use the [Conan package manager](https://conan.io/center). To
@@ -52,7 +88,7 @@ conan build . -pr mod-lcp40-v5  -pr arm-gcc-12.3  -s build_type=Debug
 > The `Release` version of the binary doesn't seem to work well so users should
 > stick to the `Debug` version until this notice is removed.
 
-## 💾 Flashing your MicroMod Board
+## 💾 Flashing your Board via command line
 
 > [!IMPORTANT]
 > Make sure to replace the `--device` and port `-p` (examples uses
