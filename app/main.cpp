@@ -2,84 +2,158 @@
 #include <charconv>
 #include <cstddef>
 #include <cstdlib>
-#include <libhal/timeout.hpp>
 #include <optional>
 #include <span>
 #include <string_view>
 
-#include <app/hardware_map.hpp>
 #include <libhal-exceptions/control.hpp>
 #include <libhal-util/as_bytes.hpp>
+#include <libhal-util/bit.hpp>
 #include <libhal-util/serial.hpp>
 #include <libhal-util/steady_clock.hpp>
 #include <libhal-util/streams.hpp>
 #include <libhal-util/timeout.hpp>
+#include <libhal/can.hpp>
 #include <libhal/error.hpp>
 #include <libhal/steady_clock.hpp>
+#include <libhal/timeout.hpp>
+#include <libhal/units.hpp>
 #include <nonstd/ring_span.hpp>
 
-hardware_map_t hardware_map{};
+#include <app/resource_list.hpp>
+
+resource_list hardware_map{};
 std::array<hal::byte, 32> command_buffer{};
-std::array<hal::can::message_t, 32> receive_buffer{};
-std::array<hal::can::message_t, 32> transmit_buffer{};
-nonstd::ring_span<hal::can::message_t> receive_queue(receive_buffer.begin(),
-                                                     receive_buffer.end());
-nonstd::ring_span<hal::can::message_t> transmit_queue(transmit_buffer.begin(),
-                                                      transmit_buffer.end());
+std::array<hal::can_message, 32> receive_buffer{};
+std::array<hal::can_message, 32> transmit_buffer{};
+nonstd::ring_span<hal::can_message> receive_queue(receive_buffer.begin(),
+                                                  receive_buffer.end());
+nonstd::ring_span<hal::can_message> transmit_queue(transmit_buffer.begin(),
+                                                   transmit_buffer.end());
 bool open;
+hal::can_extended_mask_filter::pair global_filter{ .id = 0, .mask = 0 };
 
 constexpr std::string_view version = "V0000";
 constexpr std::string_view serial_number = "N0000";
 
-bool setup_command(hal::can& p_can, std::span<hal::byte> p_command)
+std::span<char const> to_chars(std::span<hal::byte const> p_data)
+{
+  return { reinterpret_cast<char const*>(p_data.data()), p_data.size() };
+}
+
+std::optional<hal::u32> ascii_hex_bytes_to_u32(
+  std::span<hal::byte const> p_data)
+{
+  auto const char_data = to_chars(p_data);
+  hal::u32 value = 0;
+  auto const status = std::from_chars(
+    char_data.data(), char_data.data() + char_data.size(), value, 16);
+
+  if (status.ec != std::errc{}) {
+    return std::nullopt;
+  }
+
+  return value;
+}
+
+bool setup_command(hal::can_bus_manager& p_can,
+                   std::span<hal::byte const> p_command)
 {
   using namespace hal::literals;
 
-  if (p_command.size() != 3 || open) {
+  if (p_command.size() != 3 or open) {
     return false;
   }
 
   switch (p_command[1]) {
     case '0': {
-      p_can.configure({ .baud_rate = 10.0_kHz });
+      p_can.baud_rate(10_kHz);
       break;
     }
     case '1': {
-      p_can.configure({ .baud_rate = 20.0_kHz });
+      p_can.baud_rate(20_kHz);
       break;
     }
     case '2': {
-      p_can.configure({ .baud_rate = 50.0_kHz });
+      p_can.baud_rate(50_kHz);
       break;
     }
     case '3': {
-      p_can.configure({ .baud_rate = 100.0_kHz });
+      p_can.baud_rate(100_kHz);
       break;
     }
     case '4': {
-      p_can.configure({ .baud_rate = 125.0_kHz });
+      p_can.baud_rate(125_kHz);
       break;
     }
     case '5': {
-      p_can.configure({ .baud_rate = 250.0_kHz });
+      p_can.baud_rate(250_kHz);
       break;
     }
     case '6': {
-      p_can.configure({ .baud_rate = 500.0_kHz });
+      p_can.baud_rate(500_kHz);
       break;
     }
     case '7': {
-      p_can.configure({ .baud_rate = 800.0_kHz });
+      p_can.baud_rate(800_kHz);
       break;
     }
     case '8': {
-      p_can.configure({ .baud_rate = 1.0_MHz });
+      p_can.baud_rate(1_MHz);
       break;
     }
     default: {
       return false;
     }
   }
+  return true;
+}
+
+// TODO(#14): This function needs to be tested
+bool set_custom_baud_rate(hal::can_bus_manager& p_can,
+                          std::span<hal::byte const> p_command)
+{
+  using namespace hal::literals;
+
+  constexpr std::string_view format = "sxxyy\r";
+  if (open or p_command.size() != format.size()) {
+    return false;
+  }
+
+  // CANUSB assumes a SJA0001 device operating at a 16MHz clock frequency
+  constexpr auto oscillator_frequency = 16_MHz;
+  constexpr auto baud_rate_prescaler = hal::bit_mask::from(0, 5);
+  [[maybe_unused]] constexpr auto synchronization_jump_width =
+    hal::bit_mask::from(6, 7);
+  constexpr auto time_segment_1 = hal::bit_mask::from(0, 3);
+  constexpr auto time_segment_2 = hal::bit_mask::from(4, 6);
+  [[maybe_unused]] constexpr auto sampling = hal::bit_mask::from(7);
+
+  auto const byte1 = ascii_hex_bytes_to_u32(p_command.subspan(1, 1));
+  auto const byte2 = ascii_hex_bytes_to_u32(p_command.subspan(2, 1));
+
+  if (not byte1 or not byte2) {
+    return false;
+  }
+
+  auto const baud_rate = hal::bit_extract<baud_rate_prescaler>(*byte1);
+  auto const tseg1 = hal::bit_extract<time_segment_1>(*byte2);
+  auto const tseg2 = hal::bit_extract<time_segment_2>(*byte2);
+
+  // Equation:
+  //
+  //     Bit Rate = Fosc / (2 * BRP * (1 + TSEG1 + TSEG2))
+  //
+  auto const bit_rate =
+    oscillator_frequency / ((2 * baud_rate) * (1 + tseg1 + tseg2));
+
+  try {
+    p_can.baud_rate(bit_rate);
+  } catch (hal::operation_not_supported const&) {
+    // Failed to set the baud rate return failure
+    return false;
+  }
+
   return true;
 }
 
@@ -107,10 +181,12 @@ bool status_flags_command(hal::serial& p_serial)
 {
   std::uint8_t status = 0x0;
 
+  // Bit 0 receive queue full
   if (receive_queue.full()) {
     status |= 1 << 0;
   }
 
+  // Bit 1 transmit queue full
   if (transmit_queue.full()) {
     status |= 1 << 1;
   }
@@ -126,34 +202,35 @@ bool status_flags_command(hal::serial& p_serial)
   return true;
 }
 
-std::optional<hal::can::message_t> string_to_can_message(
-  std::span<hal::byte> p_command)
+std::optional<hal::can_message> string_to_can_message(
+  std::span<hal::byte const> p_command)
 {
-  hal::can::message_t message{};
+  hal::can_message message{};
   std::size_t format_size = 0;
   std::size_t id_byte_length = 0;
-  auto command = p_command[0];
-  std::span<char> command_chars(reinterpret_cast<char*>(p_command.data()),
-                                p_command.size());
+  auto const command = p_command[0];
+  auto command_chars = to_chars(p_command);
 
-  if (command == 'r' || command == 't') {
-    constexpr std::string_view format = "riiil\r";
+  if (command == 'r' or command == 't') {
+    constexpr std::string_view format = "tiiil\r";
     format_size = format.size();
     id_byte_length = 3;
-  } else if (command == 'R' || command == 'T') {
-    constexpr std::string_view format = "Riiiiiiiil\r";
+    message.extended(false);
+  } else if (command == 'R' or command == 'T') {
+    constexpr std::string_view format = "Tiiiiiiiil\r";
     format_size = format.size();
     id_byte_length = 8;
+    message.extended(true);
   }
 
   if (command_chars.size() < format_size) {
     return std::nullopt;
   }
 
-  if (command == 'r' || command == 'R') {
-    message.is_remote_request = true;
+  if (command == 'r' or command == 'R') {
+    message.remote_request(true);
   } else {
-    message.is_remote_request = false;
+    message.remote_request(false);
   }
 
   // Skip first character
@@ -161,14 +238,14 @@ std::optional<hal::can::message_t> string_to_can_message(
 
   // Scope for status variable
   {
-    auto status = std::from_chars(command_chars.data(),
-                                  command_chars.data() + id_byte_length,
-                                  message.id,
-                                  16);
+    hal::u32 id = 0;
+    auto const status = std::from_chars(
+      &command_chars[0], &command_chars[id_byte_length], id, 16);
 
     if (status.ec != std::errc{}) {
       return std::nullopt;
     }
+    message.id(id);
   }
 
   // Increment past ID field
@@ -187,7 +264,7 @@ std::optional<hal::can::message_t> string_to_can_message(
   // (+ 1) for the '\r' character
   bool length_within_bounds = command_chars.size() == (payload_length * 2) + 1;
 
-  if (not valid_payload_length || not length_within_bounds) {
+  if (not valid_payload_length or not length_within_bounds) {
     return std::nullopt;
   }
 
@@ -216,9 +293,39 @@ bool version_command(hal::serial& p_serial)
   return true;
 }
 
+bool sets_acceptance_code_register(hal::can_extended_mask_filter& p_filter,
+                                   std::span<hal::byte const> p_command)
+{
+  constexpr std::string_view format = "Mxxxxxxxx\r";
+  // -1 to remove the null character length
+  if (open or p_command.size() < (format.size() - 1)) {
+    return false;
+  }
+
+  // subspan 1 to ignore the command character
+  auto const register_value = ascii_hex_bytes_to_u32(p_command.subspan(1));
+
+  if (not register_value) {
+    return false;
+  }
+
+  if (p_command[0] == 'M') {
+    global_filter.id = *register_value;
+  } else if (p_command[0] == 'm') {
+    global_filter.mask = *register_value;
+  } else {
+    return false;
+  }
+
+  p_filter.allow(global_filter);
+
+  return true;
+}
+
 void handle_command(hal::serial& p_serial,
-                    hal::can& p_can,
-                    std::span<hal::byte> p_command)
+                    hal::can_bus_manager& p_can_manager,
+                    hal::can_extended_mask_filter& p_filter,
+                    std::span<hal::byte const> p_command)
 {
   using namespace std::literals;
 
@@ -243,16 +350,23 @@ void handle_command(hal::serial& p_serial,
 
   if (not open) {
     // TODO(#11): Add command 'Z': timestamp control
-    // TODO(#12): Add command 'M': Sets Acceptance Code Register
-    // TODO(#13): Add command 'm': Sets Acceptance Mask Register
-    // TODO(#14): Add command 's': Setup with BTR0/BTR1 CAN bit-rates
     switch (p_command[0]) {
       case 'S': {
-        handled = setup_command(p_can, p_command);
+        handled = setup_command(p_can_manager, p_command);
+        break;
+      }
+      case 's': {
+        // TODO(#14): This needs to be tested
+        handled = set_custom_baud_rate(p_can_manager, p_command);
         break;
       }
       case 'O': {
         handled = open_command();
+        break;
+      }
+      case 'M':
+      case 'm': {
+        handled = sets_acceptance_code_register(p_filter, p_command);
         break;
       }
     }
@@ -267,8 +381,8 @@ void handle_command(hal::serial& p_serial,
         break;
       }
       case 't':
-      case 'T':
       case 'r':
+      case 'T':
       case 'R': {
         const auto message = string_to_can_message(p_command);
         if (message) {
@@ -290,30 +404,30 @@ void handle_command(hal::serial& p_serial,
 }
 
 void print_encoded_can_message(hal::serial& p_serial,
-                               const hal::can::message_t& p_message)
+                               const hal::can_message& p_message)
 {
-  const bool standard = p_message.id < (2 << 11);
+  const bool standard = not p_message.extended();
 
-  if (standard and not p_message.is_remote_request) {
+  if (standard and not p_message.remote_request()) {
     // A standard 11-bit CAN frame
     // tiiildd...[CR]
-    hal::print<16>(p_serial, "t%03X", p_message.id);
-  } else if (not standard and not p_message.is_remote_request) {
+    hal::print<16>(p_serial, "t%03X", p_message.id());
+  } else if (not standard and not p_message.remote_request()) {
     // A extended 29-bit CAN frame
     // Tiiiiiiiildd...[CR]
-    hal::print<16>(p_serial, "T%08X", p_message.id);
-  } else if (standard and p_message.is_remote_request) {
+    hal::print<16>(p_serial, "T%08X", p_message.id());
+  } else if (standard and p_message.remote_request()) {
     // A standard 11-bit CAN frame
     // riii[CR]
-    hal::print<16>(p_serial, "r%03X", p_message.id);
-  } else if (not standard and p_message.is_remote_request) {
+    hal::print<16>(p_serial, "r%03X", p_message.id());
+  } else if (not standard and p_message.remote_request()) {
     // A extended 29-bit CAN frame
     // Riiiiiiii[CR]
-    hal::print<16>(p_serial, "R%08X", p_message.id);
+    hal::print<16>(p_serial, "R%08X", p_message.id());
   }
 
   // Send data bytes if the message is not a remote request.
-  if (not p_message.is_remote_request) {
+  if (not p_message.remote_request()) {
     hal::print<16>(p_serial, "%X", int(p_message.length));
     for (std::size_t i = 0; i < p_message.length; i++) {
       hal::print<16>(p_serial, "%02X", int(p_message.payload[i]));
@@ -323,7 +437,8 @@ void print_encoded_can_message(hal::serial& p_serial,
   hal::print(p_serial, "\r");
 }
 
-void can_receive_handler(const hal::can::message_t& p_message)
+void can_receive_handler(hal::can_interrupt::on_receive_tag,
+                         const hal::can_message& p_message)
 {
   if (not receive_queue.full()) {
     receive_queue.push_back(p_message);
@@ -348,7 +463,7 @@ public:
    * lifetime of that data is no longer available.
    * @param p_buffer - buffer to fill data into
    */
-  stream_fill_upto_v2(std::span<const hal::byte> p_sequence,
+  stream_fill_upto_v2(std::span<hal::byte const> p_sequence,
                       std::span<hal::byte> p_buffer);
 
   friend std::span<const hal::byte> operator|(
@@ -356,11 +471,11 @@ public:
     stream_fill_upto_v2& p_self);
 
   hal::work_state state();
-  std::span<hal::byte> span();
+  std::span<hal::byte const> span();
   std::span<hal::byte> unfilled();
 
 private:
-  std::span<const hal::byte> m_sequence;
+  std::span<hal::byte const> m_sequence;
   std::span<hal::byte> m_buffer;
   size_t m_fill_amount = 0;
   size_t m_search_index = 0;
@@ -372,20 +487,33 @@ int main()
   using namespace std::literals;
   using namespace hal::literals;
 
+  hal::set_terminate(+[]() {
+    if (hardware_map.reset) {
+      (*hardware_map.reset)();
+    }
+
+    while (true) {
+      // Wait for debugger
+      continue;
+    }
+  });
+
   try {
-    hardware_map = initialize_platform();
+    initialize_platform(hardware_map);
   } catch (...) {
     hal::halt();
   }
 
-  hal::set_terminate(+[]() { hardware_map.reset(); });
+  auto& red_led = *hardware_map.red_led.value();
+  auto& clock = *hardware_map.clock.value();
+  auto& console = *hardware_map.console.value();
+  auto& can = *hardware_map.can_transceiver.value();
+  auto& can_interrupt = *hardware_map.can_interrupt.value();
+  auto& can_bus_manager = *hardware_map.can_bus_manager.value();
+  auto& can_mask_filter = *hardware_map.can_mask_filter.value();
 
-  auto& red_led = *hardware_map.red_led;
-  auto& clock = *hardware_map.clock;
-  auto& console = *hardware_map.console;
-  auto& can = *hardware_map.can;
-
-  can.configure({ .baud_rate = 100.0_kHz });
+  can_bus_manager.baud_rate(100_kHz);
+  can_mask_filter.allow(global_filter);
 
   // List of commands
   hal::stream_fill_upto_v2 find_end(hal::as_bytes("\r"sv), command_buffer);
@@ -395,7 +523,7 @@ int main()
     find_end = hal::stream_fill_upto_v2(hal::as_bytes("\r"sv), command_buffer);
   };
 
-  can.on_receive(can_receive_handler);
+  can_interrupt.on_receive(can_receive_handler);
 
   static std::array<hal::byte, 32> temporary_read_buffer{};
   decltype(console.read(temporary_read_buffer).data) received_console_data{};
@@ -412,7 +540,8 @@ int main()
     }
 
     if (hal::finished(find_end)) {
-      handle_command(console, can, find_end.span());
+      handle_command(
+        console, can_bus_manager, can_mask_filter, find_end.span());
       red_led.level(true);
     }
 
@@ -454,7 +583,7 @@ extern "C"
 
 namespace hal {
 
-stream_fill_upto_v2::stream_fill_upto_v2(std::span<const hal::byte> p_sequence,
+stream_fill_upto_v2::stream_fill_upto_v2(std::span<hal::byte const> p_sequence,
                                          std::span<hal::byte> p_buffer)
   : m_sequence(p_sequence)
   , m_buffer(p_buffer)
@@ -465,8 +594,8 @@ std::span<const hal::byte> operator|(
   const std::span<const hal::byte>& p_input_data,
   stream_fill_upto_v2& p_self)
 {
-  if (p_input_data.empty() ||
-      p_self.m_sequence.size() == p_self.m_search_index ||
+  if (p_input_data.empty() or
+      p_self.m_sequence.size() == p_self.m_search_index or
       p_self.m_buffer.empty()) {
     return p_input_data;
   }
@@ -506,7 +635,7 @@ work_state stream_fill_upto_v2::state()
   return work_state::in_progress;
 }
 
-std::span<hal::byte> stream_fill_upto_v2::span()
+std::span<hal::byte const> stream_fill_upto_v2::span()
 {
   return m_buffer.subspan(0, m_fill_amount);
 }
