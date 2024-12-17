@@ -14,23 +14,27 @@
 
 #pragma once
 
+#include <optional>
+
 #include <libhal/can.hpp>
 #include <libhal/functional.hpp>
 #include <libhal/output_pin.hpp>
 #include <libhal/serial.hpp>
 #include <libhal/steady_clock.hpp>
 
-struct hardware_map_t
+struct resource_list
 {
-  hal::output_pin* red_led;
-  hal::serial* console;
-  hal::steady_clock* clock;
-  hal::can* can;
-  hal::callback<void()> reset;
+  std::optional<hal::output_pin*> red_led;
+  std::optional<hal::serial*> console;
+  std::optional<hal::steady_clock*> clock;
+  std::optional<hal::can_transceiver*> can_transceiver;
+  std::optional<hal::can_bus_manager*> can_bus_manager;
+  std::optional<hal::can_interrupt*> can_interrupt;
+  std::optional<hal::can_extended_mask_filter*> can_mask_filter;
+  std::optional<hal::callback<void()>> reset;
 };
 
 // Application function must be implemented by one of the compilation units
 // (.cpp) files.
 void initialize_processor();
-hardware_map_t initialize_platform();
-void application(hardware_map_t& p_framework);
+void initialize_platform(resource_list& p_map);
