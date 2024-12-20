@@ -28,14 +28,14 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4.1.1
         with:
           submodules: true
 
-      - name: 📥 Install Conan 2.2.2
-        run: pip3 install conan==2.2.2
+      - name: 📥 Install Conan 2.11.0
+        run: pip3 install conan==2.11.0
 
       - name: 📡 Add `libhal` repo to conan remotes
         run: conan remote add libhal
@@ -56,36 +56,60 @@ jobs:
       - name: Install MicroMod platform profiles
         run: conan config install -sf conan/profiles/v1 -tf profiles https://github.com/libhal/libhal-micromod.git
 
-      - name: 🏗️ Build app using "mod-lpc40-v5" [Debug]
-        run: conan build . -pr mod-lpc40-v5 -pr arm-gcc-12.3 -s build_type=Debug
+      # - name: 🏗️ Build app using "mod-lpc40-v5" [Debug]
+      #   run: conan build . -pr mod-lpc40-v5 -pr arm-gcc-12.3 -s build_type=Debug
 
-      - name: 🏗️ Build app using "mod-lpc40-v5" [Release]
-        run: conan build . -pr mod-lpc40-v5 -pr arm-gcc-12.3
+      # - name: 🔝 Extract "mod-lpc40-v5-Debug.bin" to repo root
+      #   run: cp build/micromod/mod-lpc40-v5/Debug/app.elf.bin mod-lpc40-v5-Debug.bin
+
+      # - name: 🏗️ Build app using "mod-lpc40-v5" [Release]
+      #   run: conan build . -pr mod-lpc40-v5 -pr arm-gcc-12.3
+
+      # - name: 🔝 Extract "mod-lpc40-v5-Release.bin" to repo root
+      #   run: cp build/micromod/mod-lpc40-v5/Release/app.elf.bin mod-lpc40-v5-Release.bin
 
       - name: 🏗️ Build app using "mod-stm32f1-v4" [Debug]
         run: conan build . -pr mod-stm32f1-v4 -pr arm-gcc-12.3 -s build_type=Debug
 
-      - name: 🏗️ Build app using "mod-stm32f1-v4" [Release]
-        run: conan build . -pr mod-stm32f1-v4 -pr arm-gcc-12.3
-
-      - name: 🔝 Extract "mod-lpc40-v5-Debug.bin" to repo root
-        run: cp build/micromod/mod-lpc40-v5/Debug/app.elf.bin mod-lpc40-v5-Debug.bin
-
-      - name: 🔝 Extract "mod-lpc40-v5-Release.bin" to repo root
-        run: cp build/micromod/mod-lpc40-v5/Release/app.elf.bin mod-lpc40-v5-Release.bin
-
       - name: 🔝 Extract "mod-stm32f1-v4-Debug.bin" to repo root
         run: cp build/micromod/mod-stm32f1-v4/Debug/app.elf.bin mod-stm32f1-v4-Debug.bin
 
+      - name: 🏗️ Build app using "mod-stm32f1-v4" [Release]
+        run: conan build . -pr mod-stm32f1-v4 -pr arm-gcc-12.3
+
       - name: 🔝 Extract "mod-stm32f1-v4-Release.elf.bin" to repo root
         run: cp build/micromod/mod-stm32f1-v4/Release/app.elf.bin mod-stm32f1-v4-Release.bin
+
+      - name: 🏗️ Build app using "mod-stm32f1-v5" [Debug]
+        run: conan build . -pr mod-stm32f1-v5 -pr arm-gcc-12.3 -s build_type=Debug
+
+      - name: 🔝 Extract "mod-stm32f1-v5-Debug.bin" to repo root
+        run: cp build/micromod/mod-stm32f1-v5/Debug/app.elf.bin mod-stm32f1-v5-Debug.bin
+
+      - name: 🏗️ Build app using "mod-stm32f1-v5" [Release]
+        run: conan build . -pr mod-stm32f1-v5 -pr arm-gcc-12.3
+
+      - name: 🔝 Extract "mod-stm32f1-v5-Release.elf.bin" to repo root
+        run: cp build/micromod/mod-stm32f1-v5/Release/app.elf.bin mod-stm32f1-v5-Release.bin
 
       - name: 🚀 Push Binaries to Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            mod-lpc40-v5-Debug.bin
-            mod-lpc40-v5-Release.bin
             mod-stm32f1-v4-Debug.bin
             mod-stm32f1-v4-Release.bin
+            mod-stm32f1-v5-Debug.bin
+            mod-stm32f1-v5-Release.bin
+
+      # - name: 🚀 Push Binaries to Release
+      #   uses: softprops/action-gh-release@v2
+      #   if: startsWith(github.ref, 'refs/tags/')
+      #   with:
+      #     files: |
+      #       mod-lpc40-v5-Debug.bin
+      #       mod-lpc40-v5-Release.bin
+      #       mod-stm32f1-v4-Debug.bin
+      #       mod-stm32f1-v4-Release.bin
+      #       mod-stm32f1-v5-Debug.bin
+      #       mod-stm32f1-v5-Release.bin
