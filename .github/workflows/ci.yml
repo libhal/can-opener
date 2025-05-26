@@ -34,8 +34,8 @@ jobs:
         with:
           submodules: true
 
-      - name: 📥 Install Conan 2.11.0
-        run: pip3 install conan==2.11.0
+      - name: 📥 Install Conan 2.16.1
+        run: pipx install conan==2.16.1
 
       - name: 📡 Add `libhal` repo to conan remotes
         run: conan remote add libhal
