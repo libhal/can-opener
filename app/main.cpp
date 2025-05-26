@@ -215,12 +215,12 @@ std::optional<hal::can_message> string_to_can_message(
     constexpr std::string_view format = "tiiil\r";
     format_size = format.size();
     id_byte_length = 3;
-    message.extended(false);
+    message.extended = false;
   } else if (command == 'R' or command == 'T') {
     constexpr std::string_view format = "Tiiiiiiiil\r";
     format_size = format.size();
     id_byte_length = 8;
-    message.extended(true);
+    message.extended = true;
   }
 
   if (command_chars.size() < format_size) {
@@ -228,9 +228,9 @@ std::optional<hal::can_message> string_to_can_message(
   }
 
   if (command == 'r' or command == 'R') {
-    message.remote_request(true);
+    message.remote_request = true;
   } else {
-    message.remote_request(false);
+    message.remote_request = false;
   }
 
   // Skip first character
@@ -245,7 +245,7 @@ std::optional<hal::can_message> string_to_can_message(
     if (status.ec != std::errc{}) {
       return std::nullopt;
     }
-    message.id(id);
+    message.id = id;
   }
 
   // Increment past ID field
@@ -406,28 +406,28 @@ void handle_command(hal::serial& p_serial,
 void print_encoded_can_message(hal::serial& p_serial,
                                const hal::can_message& p_message)
 {
-  const bool standard = not p_message.extended();
+  const bool standard = not p_message.extended;
 
-  if (standard and not p_message.remote_request()) {
+  if (standard and not p_message.remote_request) {
     // A standard 11-bit CAN frame
     // tiiildd...[CR]
-    hal::print<16>(p_serial, "t%03X", p_message.id());
-  } else if (not standard and not p_message.remote_request()) {
+    hal::print<16>(p_serial, "t%03X", p_message.id);
+  } else if (not standard and not p_message.remote_request) {
     // A extended 29-bit CAN frame
     // Tiiiiiiiildd...[CR]
-    hal::print<16>(p_serial, "T%08X", p_message.id());
-  } else if (standard and p_message.remote_request()) {
+    hal::print<16>(p_serial, "T%08X", p_message.id);
+  } else if (standard and p_message.remote_request) {
     // A standard 11-bit CAN frame
     // riii[CR]
-    hal::print<16>(p_serial, "r%03X", p_message.id());
-  } else if (not standard and p_message.remote_request()) {
+    hal::print<16>(p_serial, "r%03X", p_message.id);
+  } else if (not standard and p_message.remote_request) {
     // A extended 29-bit CAN frame
     // Riiiiiiii[CR]
-    hal::print<16>(p_serial, "R%08X", p_message.id());
+    hal::print<16>(p_serial, "R%08X", p_message.id);
   }
 
   // Send data bytes if the message is not a remote request.
-  if (not p_message.remote_request()) {
+  if (not p_message.remote_request) {
     hal::print<16>(p_serial, "%X", int(p_message.length));
     for (std::size_t i = 0; i < p_message.length; i++) {
       hal::print<16>(p_serial, "%02X", int(p_message.payload[i]));

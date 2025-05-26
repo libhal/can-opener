@@ -14,7 +14,7 @@
 
 from conan import ConanFile
 
-required_conan_version = ">=2.0.14"
+required_conan_version = ">=2.10.0"
 
 
 class demos(ConanFile):
