@@ -1,4 +1,4 @@
-# Copyright 2024 Khalil Estell
+# Copyright 2024 - 2025 Khalil Estell and the libhal contributors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -101,15 +101,3 @@ jobs:
             mod-stm32f1-v4-Release.bin
             mod-stm32f1-v5-Debug.bin
             mod-stm32f1-v5-Release.bin
-
-      # - name: 🚀 Push Binaries to Release
-      #   uses: softprops/action-gh-release@v2
-      #   if: startsWith(github.ref, 'refs/tags/')
-      #   with:
-      #     files: |
-      #       mod-lpc40-v5-Debug.bin
-      #       mod-lpc40-v5-Release.bin
-      #       mod-stm32f1-v4-Debug.bin
-      #       mod-stm32f1-v4-Release.bin
-      #       mod-stm32f1-v5-Debug.bin
-      #       mod-stm32f1-v5-Release.bin
