@@ -39,7 +39,9 @@ add_executable(${PROJECT_NAME}
     platforms/${platform}.cpp
 )
 
-target_compile_options(${PROJECT_NAME} PRIVATE -g -Wall -Wextra)
+# TODO(#28): migrate from deprecated APIs
+target_compile_options(${PROJECT_NAME} PRIVATE -g
+    -Wall -Wextra -Wno-deprecated-declarations)
 target_include_directories(${PROJECT_NAME} PUBLIC include)
 target_link_libraries(${PROJECT_NAME} PRIVATE
     libhal::${platform_library}
