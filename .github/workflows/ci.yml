@@ -34,8 +34,8 @@ jobs:
         with:
           submodules: true
 
-      - name: 📥 Install Conan 2.16.1
-        run: pipx install conan==2.16.1
+      - name: 📥 Install Conan >=2.16.1
+        run: pipx install conan>=2.16.1
 
       - name: 📡 Add `libhal` repo to conan remotes
         run: conan remote add libhal
@@ -69,25 +69,25 @@ jobs:
       #   run: cp build/micromod/mod-lpc40-v5/Release/app.elf.bin mod-lpc40-v5-Release.bin
 
       - name: 🏗️ Build app using "mod-stm32f1-v4" [Debug]
-        run: conan build . -pr mod-stm32f1-v4 -pr arm-gcc-12.3 -s build_type=Debug
+        run: conan build . -pr mod-stm32f1-v4 -pr arm-gcc-12.3 -s build_type=Debug -b missing
 
       - name: 🔝 Extract "mod-stm32f1-v4-Debug.bin" to repo root
         run: cp build/micromod/mod-stm32f1-v4/Debug/app.elf.bin mod-stm32f1-v4-Debug.bin
 
       - name: 🏗️ Build app using "mod-stm32f1-v4" [Release]
-        run: conan build . -pr mod-stm32f1-v4 -pr arm-gcc-12.3
+        run: conan build . -pr mod-stm32f1-v4 -pr arm-gcc-12.3 -b missing
 
       - name: 🔝 Extract "mod-stm32f1-v4-Release.elf.bin" to repo root
         run: cp build/micromod/mod-stm32f1-v4/Release/app.elf.bin mod-stm32f1-v4-Release.bin
 
       - name: 🏗️ Build app using "mod-stm32f1-v5" [Debug]
-        run: conan build . -pr mod-stm32f1-v5 -pr arm-gcc-12.3 -s build_type=Debug
+        run: conan build . -pr mod-stm32f1-v5 -pr arm-gcc-12.3 -s build_type=Debug -b missing
 
       - name: 🔝 Extract "mod-stm32f1-v5-Debug.bin" to repo root
         run: cp build/micromod/mod-stm32f1-v5/Debug/app.elf.bin mod-stm32f1-v5-Debug.bin
 
       - name: 🏗️ Build app using "mod-stm32f1-v5" [Release]
-        run: conan build . -pr mod-stm32f1-v5 -pr arm-gcc-12.3
+        run: conan build . -pr mod-stm32f1-v5 -pr arm-gcc-12.3 -b missing
 
       - name: 🔝 Extract "mod-stm32f1-v5-Release.elf.bin" to repo root
         run: cp build/micromod/mod-stm32f1-v5/Release/app.elf.bin mod-stm32f1-v5-Release.bin
