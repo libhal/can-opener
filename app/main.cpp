@@ -494,7 +494,6 @@ int main()
 
     while (true) {
       // Wait for debugger
-      continue;
     }
   });
 
@@ -576,7 +575,7 @@ extern "C"
   void __assert_func(const char*, int, const char*, const char*)
   {
     while (true) {
-      continue;
+      // Empty: Clang deletes an infinite loop that holds only `continue;`
     }
   }
 }
