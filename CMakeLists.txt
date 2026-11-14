@@ -1,4 +1,4 @@
-# Copyright 2024 Khalil Estell
+# Copyright 2024 - 2025 Khalil Estell and the libhal contributors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -39,7 +39,9 @@ add_executable(${PROJECT_NAME}
     platforms/${platform}.cpp
 )
 
-target_compile_options(${PROJECT_NAME} PRIVATE -g -Wall -Wextra)
+# TODO(#28): migrate from deprecated APIs
+target_compile_options(${PROJECT_NAME} PRIVATE -g
+    -Wall -Wextra -Wno-deprecated-declarations)
 target_include_directories(${PROJECT_NAME} PUBLIC include)
 target_link_libraries(${PROJECT_NAME} PRIVATE
     libhal::${platform_library}
